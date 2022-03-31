@@ -1,5 +1,7 @@
 #include "serialportlist.h"
 #include <QDebug>
+#include "widget.h"
+#include "serial.h"
 
 QString *SerialPortList::current_com = new QString;
 
@@ -13,9 +15,13 @@ SerialPortList::SerialPortList(QWidget *parent)
 
 void SerialPortList::serial_list_display(void)
 {
+    Serial serial;
+    if(serial.get_serial_status() == serial_close)
+    {
     this->clear();
     this->addItems(Serial::update_serial_list());
     showPopup();
+    }
 }
 
 void SerialPortList::mousePressEvent(QMouseEvent *event)

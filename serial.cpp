@@ -5,14 +5,13 @@
 serial_status_e Serial::serial_status = serial_close;
 QByteArray *Serial::rx_data_buf_a = new QByteArray;
 QByteArray *Serial::rx_data_buf_b = new QByteArray;
+QByteArray *Serial::rx_data_buf_send = new QByteArray;
 char Serial::use_buf = 'a';
-int Serial::rx_number = 0;
-
-
+int64_t Serial::rx_num = 0;
 Serial::Serial(QWidget *parent)
     : QSerialPort{parent}
 {
-
+    setBaudRate(115200);
 }
 
 QStringList Serial::update_serial_list()
@@ -40,14 +39,13 @@ uint8_t Serial::open_serial()
     {
         return 1;
     }
-    setBaudRate(115200);
     setDataBits(QSerialPort::Data8);
     setParity(QSerialPort::NoParity);
     setStopBits(QSerialPort::OneStop);
     setFlowControl(QSerialPort::NoFlowControl);
     serial_status = serial_open;
 
-    QObject::connect(this, &QSerialPort::readyRead, this, &Serial::wait_read_data);
+    connect(this, &QSerialPort::readyRead, this, &Serial::wait_read_data);
     return 0;
 }
 
@@ -55,14 +53,63 @@ uint8_t Serial::close_serial()
 {
     close();
     serial_status = serial_close;
-    QObject::disconnect(this, &QSerialPort::readyRead, this, &Serial::wait_read_data);
+
+    disconnect(this, &QSerialPort::readyRead, this, &Serial::wait_read_data);
 
     return 0;
 }
 
 uint8_t Serial::wait_read_data()
 {
-    if(rx_number > 1000)
+    if(use_buf == 'a')
+    {
+        rx_data_buf_a->append(readAll());
+        return 0;
+    }
+    if(use_buf == 'b')
+    {
+        rx_data_buf_b->append(readAll());
+        return 0;
+    }
+
+    rx_data_buf_a->clear();
+    rx_data_buf_b->clear();
+    use_buf = 'a';
+    return 1;
+}
+
+QByteArray *Serial::get_rx_data(void)
+{
+    if(use_buf == 'a')
+    {
+        if(rx_data_buf_a->length()!=0)
+        {
+            use_buf = 'b';
+            rx_num +=rx_data_buf_a->length();
+            rx_data_buf_b->clear();
+            *rx_data_buf_send = *rx_data_buf_a;
+            return rx_data_buf_send;
+        }
+        return nullptr;
+    }
+    if(use_buf == 'b')
+    {
+        if(rx_data_buf_b->length()!=0)
+        {
+            use_buf = 'a';
+            rx_num +=rx_data_buf_b->length();
+            rx_data_buf_a->clear();
+            *rx_data_buf_send = *rx_data_buf_b;
+            return rx_data_buf_send;
+        }
+        return nullptr;
+    }
+    return nullptr;
+}
+/*
+uint8_t Serial::wait_read_data()
+{
+    if(rx_number > 100)
     {
         rx_number = 0;
         if(use_buf == 'a')
@@ -94,5 +141,26 @@ uint8_t Serial::wait_read_data()
     }
     return 1;
 }
+*/
+qint32 Serial::set_serial_baud(QString baud_text)
+{
+    setBaudRate(baud_text.toInt());
+    return 0;
+}
 
+uint8_t Serial::clear_rx_num(void)
+{
+    rx_num =0;
+    return 0;
+}
 
+QString Serial::get_rx_num(void)
+{
+    return QString::number(rx_num);
+}
+
+uint8_t Serial::send_data(QString tx_data)
+{
+    write(tx_data.toUtf8());
+    return 0;
+}

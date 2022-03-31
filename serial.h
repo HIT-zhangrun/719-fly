@@ -18,22 +18,22 @@ public:
     explicit Serial(QWidget *parent = nullptr);
     static QStringList update_serial_list();
     static serial_status_e get_serial_status();
-
     uint8_t open_serial();
     uint8_t close_serial();
-
-
+    uint8_t wait_read_data();
+    QByteArray *get_rx_data(void);
+    qint32 set_serial_baud(QString baud_text);
+    uint8_t clear_rx_num(void);
+    QString get_rx_num(void);
+    uint8_t send_data(QString tx_data);
 private:
     static serial_status_e serial_status;
-
-    uint8_t wait_read_data();
     static QByteArray *rx_data_buf_a;
     static QByteArray *rx_data_buf_b;
-    static int rx_number;
+    static QByteArray *rx_data_buf_send;
     static char use_buf;
-
+    static int64_t rx_num;
 signals:
-    void receive_data_display(QByteArray *buf);
 
 };
 
